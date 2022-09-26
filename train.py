@@ -15,9 +15,9 @@ import cv2
 from time import time
 
 class args():
-    epochs = 10   # "number of training epochs, default is 10"
-    save_per_epoch = 5
-    batch_size = 3  # "batch size for training/testing, default is 1"
+    epochs = 60   # "number of training epochs, default is 10"
+    save_per_epoch = 15
+    batch_size = 4  # "batch size for training/testing, default is 1"
     pretrained = False
     save_model_dir = "./weights/" #"path to folder where trained model with checkpoints will be saved."
     save_logs_dir = "./logs/"
@@ -142,27 +142,24 @@ def train():
                     d_g = discriminator(generated)
 
                     if use_cuda:
-                        generated = generated.cuda()
-                        target = target.cuda()
-                        d_t = d_t.cpu()
-                        d_g = d_g.cpu()
+                        d_t = d_t.cuda()
+                        d_g = d_g.cuda()
                     # print(generated.device)
                     # print(target.device)
- 
+                    d_loss = discriminator_loss(d_t, d_g)
+                    optimizer_D.zero_grad()
+                    d_loss.backward(retain_graph=True)
+                    optimizer_D.step()
+
                     int_loss = intensity_loss(generated, target) 
                     grad_loss = gradient_loss(generated, target)
                     adv_loss = adversarial_loss(d_g)
                     
                     g_loss = int_loss + grad_loss+0.05 * adv_loss
                     # print(type(g_loss)) #计算损失，得到的都是一个tensor数值
-                    
-                    d_loss = discriminator_loss(d_t, d_g)
 
-                    optimizer_D.zero_grad()
-                    d_loss.backward(retain_graph=True)
                     optimizer_G.zero_grad()
                     g_loss.backward()
-                    optimizer_D.step()
                     optimizer_G.step()
                     #每完成一次小循环(即利用五个不同的随机起始点得到的连续五帧图像，一个Train计算一次损失函数
                     #这里有个疑问，为什么不把它移到里面去，这样不是只有最后一个frames，即pbar的最后一次迭代得到了利用吗
